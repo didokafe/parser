@@ -5,4 +5,4 @@
 
 
 mvn clean package
-java -jar target/parser.jar --accesslog=/home/dido/Dropbox/Java_MySQL_Test/Java_MySQL_Test_Instructions.txt
+java -jar target/parser.jar --accesslog=/home/dido/Dropbox/Java_MySQL_Test/access-part.log
