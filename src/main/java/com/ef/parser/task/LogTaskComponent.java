@@ -19,7 +19,7 @@ public class LogTaskComponent {
 
     @BeforeTask
     public void findLogs(TaskExecution taskExecution) {
-        logger.info("task running..." + taskExecution.getArguments().get(0));
+        //logger.info("task running..." + taskExecution.getArguments().get(0));
         logRepository.findAll();
     }
 }
