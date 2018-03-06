@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -29,12 +30,13 @@ public class LogTaskComponent {
     @Autowired
     private LogFileRepository logFileRepository;
 
-    @Value("${parser.file.date-format}")
-    private String format;
+    //@Value("yyyy-MM-dd HH:mm:ss.SSS")
+    private String format = "yyyy-MM-dd HH:mm:ss.SSS";
 
     private String filePath;
     private Date startDate;
-    private String duration;
+    private Date endDate;
+    private Duration duration;
     private Integer threshold;
 
 
@@ -56,7 +58,8 @@ public class LogTaskComponent {
             throw new RuntimeException(e.getMessage());
         }
         logFileRepository.save(logEntries);
-        List<LogEntry> results = logFileRepository.findAll();
+        setEndDate(startDate, duration);
+        List<LogEntry> results = logFileRepository.findByDatesAndTreshold(startDate, endDate, threshold);
         logger.info("Number of results..." + results.size());
     }
 
@@ -72,7 +75,7 @@ public class LogTaskComponent {
                     startDate = getStartDate(argPart[1]);
                     break;
                 case("--duration"):
-                    duration = Duration.valueOf(argPart[1].toUpperCase()).name();
+                    duration = Duration.valueOf(argPart[1].toUpperCase());
                     break;
                 case("--threshold"):
                     threshold = Integer.valueOf(argPart[1]);
@@ -96,6 +99,8 @@ public class LogTaskComponent {
     }
 
     private Date getStartDate(String startDate) {
+        startDate = startDate.replaceFirst("\\.", " ");
+        logger.info("@@@@@@@@@@@@@@@@@: " + startDate);
         SimpleDateFormat dateFormat = new SimpleDateFormat(format);
         try {
             return dateFormat.parse(startDate);
@@ -103,5 +108,21 @@ public class LogTaskComponent {
             logger.error("Incorrect date format.\n");
             throw new RuntimeException(e.getMessage());
         }
+    }
+
+    private void setEndDate(Date startDate, Duration duration) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(startDate);
+
+        switch (duration) {
+            case DAILY:
+                calendar.add(Calendar.DATE, 1);
+                break;
+            case HOURLY:
+                calendar.add(Calendar.HOUR, 1);
+                break;
+        }
+
+        endDate = calendar.getTime();
     }
 }
