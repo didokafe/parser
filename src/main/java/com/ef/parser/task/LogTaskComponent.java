@@ -1,7 +1,9 @@
 package com.ef.parser.task;
 
+import com.ef.parser.domain.Blocked;
 import com.ef.parser.domain.Duration;
 import com.ef.parser.domain.LogEntry;
+import com.ef.parser.repository.BlockedRepository;
 import com.ef.parser.repository.LogFileRepository;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
@@ -30,6 +32,9 @@ public class LogTaskComponent {
     @Autowired
     private LogFileRepository logFileRepository;
 
+    @Autowired
+    private BlockedRepository blockedRepository;
+
     @Value("${parser.file.date-format}")
     private String format;
     @Value("${parser.console.date-format}")
@@ -42,6 +47,10 @@ public class LogTaskComponent {
     private Long threshold;
 
 
+    /**
+     * The Spring Framework will call this method to run the task.
+     * @param taskExecution
+     */
     @BeforeTask
     public void processLogs(TaskExecution taskExecution) {
         resolveArgs(taskExecution.getArguments());
@@ -51,7 +60,6 @@ public class LogTaskComponent {
         try {
             List<String> lines = FileUtils.readLines(file, "UTF-8");
             lines.forEach(line -> {
-                //logger.info("task running..." + line);
                 logEntries.add(convertToLogFile(line));
             });
 
@@ -63,9 +71,14 @@ public class LogTaskComponent {
         setEndDate(startDate, duration);
         List<LogEntry> results = logFileRepository.findByDatesAndTreshold(startDate, endDate, threshold);
         logger.info("Number of results..." + results.size());
+        processBlocked(results);
     }
 
-    //switch to resolve arguments
+    /**
+     * Resolve the input arguments.
+     * They don't need to be in an exact order.
+     * @param args Input
+     */
     private void resolveArgs(List<String> args) {
         args.forEach(arg -> {
             String[] argPart = arg.split("=");
@@ -88,6 +101,28 @@ public class LogTaskComponent {
         });
     }
 
+    /**
+     * Write the returned results to a new table.
+     * @param entries The saved entries from a file.
+     */
+    private void processBlocked(List<LogEntry> entries) {
+        List<Blocked> blockeds = new ArrayList<>();
+        entries.forEach(entry -> {
+            Blocked blocked = new Blocked();
+            blocked.setIp(entry.getIp());
+            String period = duration.equals(Duration.HOURLY) ? "hour" : "day";
+            blocked.setReason("Too many requests per " + period);
+            blockeds.add(blocked);
+            logger.info("Blocked ip: " + blocked.getIp() + " | " + blocked.getReason());
+        });
+        blockedRepository.save(blockeds);
+    }
+
+    /**
+     * Converts a string to a ready for saving LogEntry
+     * @param line The input line of a file.
+     * @return LogEntry
+     */
     private LogEntry convertToLogFile(String line) {
         String[] lineArr = line.split(DELIMITER);
         LogEntry logEntry = new LogEntry();
@@ -101,24 +136,20 @@ public class LogTaskComponent {
     }
 
     private Date getStartDate(String startDate) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat(format);
-        try {
-            return dateFormat.parse(startDate);
-        } catch (ParseException e) {
-            logger.error("Incorrect date format.\n");
-            throw new RuntimeException(e.getMessage());
-        }
+        return convertDate(startDate, format);
     }
 
     private Date getConsoleDate(String inputDate) {
-        inputDate = inputDate.replaceFirst("\\.", " ");
-        inputDate += ".000";
+        return convertDate(inputDate, consoleFormat);
+    }
 
-        SimpleDateFormat dateFormat = new SimpleDateFormat(consoleFormat);
+    private Date convertDate(String date, String format) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat(format);
+
         try {
-            return dateFormat.parse(inputDate);
+            return dateFormat.parse(date);
         } catch (ParseException e) {
-            logger.error("Incorrect console date format.\n");
+            logger.error("Incorrect date format.\n");
             throw new RuntimeException(e.getMessage());
         }
     }

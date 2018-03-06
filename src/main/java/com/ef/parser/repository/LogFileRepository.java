@@ -9,7 +9,6 @@ import java.util.List;
 
 public interface LogFileRepository extends JpaRepository<LogEntry, Long> {
 
-    //select r.* from log_entry r where r.date BETWEEN '2017-01-01.13:00:00' AND '2017-01-01.14:00:00' GROUP BY r.ip HAVING count(r.ip) > 200;
     @Query("select e from LogEntry e where e.date >= ?1 and e.date < ?2 group by e.ip having count(e.ip) >= ?3")
     List<LogEntry> findByDatesAndTreshold(Date startDate, Date endDate, Long treshold);
 }
