@@ -1,6 +1,7 @@
 package com.ef.parser.task;
 
-import com.ef.parser.domain.LogFile;
+import com.ef.parser.domain.Duration;
+import com.ef.parser.domain.LogEntry;
 import com.ef.parser.repository.LogFileRepository;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
@@ -16,6 +17,7 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Component
@@ -31,27 +33,30 @@ public class LogTaskComponent {
     private String format;
 
     private String filePath;
+    private Date startDate;
+    private String duration;
+    private Integer threshold;
 
 
     @BeforeTask
     public void processLogs(TaskExecution taskExecution) {
         resolveArgs(taskExecution.getArguments());
         File file = new File(filePath);
-        List<LogFile> logFiles = new ArrayList<>();
+        List<LogEntry> logEntries = new ArrayList<>();
 
         try {
             List<String> lines = FileUtils.readLines(file, "UTF-8");
             lines.forEach(line -> {
                 //logger.info("task running..." + line);
-                logFiles.add(convertToLogFile(line));
+                logEntries.add(convertToLogFile(line));
             });
 
         } catch (IOException e) {
             logger.error("Incorrect file path or no file.\n");
             throw new RuntimeException(e.getMessage());
         }
-        logFileRepository.save(logFiles);
-        List<LogFile> results = logFileRepository.findAll();
+        logFileRepository.save(logEntries);
+        List<LogEntry> results = logFileRepository.findAll();
         logger.info("Number of results..." + results.size());
     }
 
@@ -63,27 +68,40 @@ public class LogTaskComponent {
                 case("--accesslog"):
                     filePath = argPart[1];
                     break;
+                case("--startDate"):
+                    startDate = getStartDate(argPart[1]);
+                    break;
+                case("--duration"):
+                    duration = Duration.valueOf(argPart[1].toUpperCase()).name();
+                    break;
+                case("--threshold"):
+                    threshold = Integer.valueOf(argPart[1]);
+                    break;
                 default:
                     break;
             }
         });
     }
 
-    private LogFile convertToLogFile(String line) {
+    private LogEntry convertToLogFile(String line) {
         String[] lineArr = line.split(DELIMITER);
+        LogEntry logEntry = new LogEntry();
+        logEntry.setDate(getStartDate(lineArr[0]));
+        logEntry.setIp(lineArr[1]);
+        logEntry.setRequest(lineArr[2]);
+        logEntry.setStatus(lineArr[3]);
+        logEntry.setUserAgent(lineArr[4]);
+
+        return logEntry;
+    }
+
+    private Date getStartDate(String startDate) {
         SimpleDateFormat dateFormat = new SimpleDateFormat(format);
-        LogFile logFile = new LogFile();
         try {
-            logFile.setDate(dateFormat.parse(lineArr[0]));
+            return dateFormat.parse(startDate);
         } catch (ParseException e) {
             logger.error("Incorrect date format.\n");
             throw new RuntimeException(e.getMessage());
         }
-        logFile.setIp(lineArr[1]);
-        logFile.setRequest(lineArr[2]);
-        logFile.setStatus(lineArr[3]);
-        logFile.setUserAgent(lineArr[4]);
-
-        return logFile;
     }
 }

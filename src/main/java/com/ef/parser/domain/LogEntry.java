@@ -5,8 +5,8 @@ import javax.persistence.*;
 import java.util.Date;
 
 @Entity
-@Table(name = "LOG_FILE")
-public class LogFile {
+@Table(name = "LOG_ENTRY")
+public class LogEntry {
 
     @Id
     @GeneratedValue(strategy= GenerationType.AUTO)
