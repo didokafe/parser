@@ -30,14 +30,16 @@ public class LogTaskComponent {
     @Autowired
     private LogFileRepository logFileRepository;
 
-    //@Value("yyyy-MM-dd HH:mm:ss.SSS")
-    private String format = "yyyy-MM-dd HH:mm:ss.SSS";
+    @Value("${parser.file.date-format}")
+    private String format;
+    @Value("${parser.console.date-format}")
+    private String consoleFormat;
 
     private String filePath;
     private Date startDate;
     private Date endDate;
     private Duration duration;
-    private Integer threshold;
+    private Long threshold;
 
 
     @BeforeTask
@@ -72,13 +74,13 @@ public class LogTaskComponent {
                     filePath = argPart[1];
                     break;
                 case("--startDate"):
-                    startDate = getStartDate(argPart[1]);
+                    startDate = getConsoleDate(argPart[1]);
                     break;
                 case("--duration"):
                     duration = Duration.valueOf(argPart[1].toUpperCase());
                     break;
                 case("--threshold"):
-                    threshold = Integer.valueOf(argPart[1]);
+                    threshold = Long.valueOf(argPart[1]);
                     break;
                 default:
                     break;
@@ -99,13 +101,24 @@ public class LogTaskComponent {
     }
 
     private Date getStartDate(String startDate) {
-        startDate = startDate.replaceFirst("\\.", " ");
-        logger.info("@@@@@@@@@@@@@@@@@: " + startDate);
         SimpleDateFormat dateFormat = new SimpleDateFormat(format);
         try {
             return dateFormat.parse(startDate);
         } catch (ParseException e) {
             logger.error("Incorrect date format.\n");
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    private Date getConsoleDate(String inputDate) {
+        inputDate = inputDate.replaceFirst("\\.", " ");
+        inputDate += ".000";
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat(consoleFormat);
+        try {
+            return dateFormat.parse(inputDate);
+        } catch (ParseException e) {
+            logger.error("Incorrect console date format.\n");
             throw new RuntimeException(e.getMessage());
         }
     }
