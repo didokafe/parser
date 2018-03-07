@@ -11,5 +11,4 @@
 
 #### The application is implemented with one of the most recent add-ons in the Spring Framework ecosystem: Spring Cloud Task
 
-###### Author - Daniel Yordanov. 
-###### I am available for questions and discussions if you wish.
+
