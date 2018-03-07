@@ -5,7 +5,6 @@ import javax.persistence.*;
 import java.util.Date;
 
 @Entity
-@Table(name = "LOG_ENTRY")
 public class LogEntry {
 
     @Id

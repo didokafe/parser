@@ -4,7 +4,6 @@ package com.ef.parser.domain;
 import javax.persistence.*;
 
 @Entity
-@Table(name = "BLOCKED")
 public class Blocked {
 
     @Id
